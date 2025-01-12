@@ -105,6 +105,7 @@ class Reader {
     }
     async open(file) {
         this.view = document.createElement('foliate-view')
+        window.reader = this.view
         document.body.append(this.view)
         await this.view.open(file)
         this.view.addEventListener('load', this.#onLoad.bind(this))
@@ -189,7 +190,7 @@ class Reader {
         doc.addEventListener('keydown', this.#handleKeydown.bind(this))
     }
     #onRelocate({ detail }) {
-        const { fraction, location, tocItem, pageItem } = detail
+        const { fraction, location, tocItem, pageItem, nextTocItem } = detail
         const percent = percentFormat.format(fraction)
         const loc = pageItem
             ? `Page ${pageItem.label}`
@@ -230,4 +231,7 @@ $('#file-button').addEventListener('click', () => $('#file-input').click())
 const params = new URLSearchParams(location.search)
 const url = params.get('url')
 if (url) open(url).catch(e => console.error(e))
+
+const id = params.get('id')
+if (id) open(`https://3min.top/file/book/${id}`).catch(e => console.error(e))
 else dropTarget.style.visibility = 'visible'
