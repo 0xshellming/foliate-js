@@ -397,9 +397,11 @@ export class View extends HTMLElement {
         const progress = this.#sectionProgress?.getProgress(index, fraction, size) ?? {}
         const tocItem = this.tocProgress?.getProgress(index, range)
         const toc = await this.book.getTocIndex(index)
-        const tocContnet = await this.book.getContent(toc)
+        const tocContnet = await this.book.getTocContent(toc)
         const pageItem = this.#pageProgress?.getProgress(index, range)
         const cfi = this.getCFI(index, range)
+        console.log('toc', toc?.path)
+        console.log('tocContnet', tocContnet)
         this.lastLocation = { ...progress, tocItem, toc, tocContnet, pageItem, cfi, range }
         if (reason === 'snap' || reason === 'page' || reason === 'scroll')
             this.history.replaceState(cfi)

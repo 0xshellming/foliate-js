@@ -5,8 +5,9 @@ const pdfjsLib = globalThis.pdfjsLib
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsPath('pdf.worker.mjs')
 const flatten = items => items
     .map(item => item.subitems?.length
-        ? [item, flatten(item.subitems)].flat()
-        : item)
+        ? item.subitems.flat()
+        : null)
+    .filter(Boolean)
     .flat()
 
 const fetchText = async url => await (await fetch(url)).text()
@@ -123,7 +124,7 @@ export const makePDF = async file => {
         isEvalSupported: false,
     }).promise
 
-    const book = { rendition: { layout: 'pre-paginated', pdf, isPdf: true } }
+    const book = { rendition: { layout: 'pre-paginated', pdf, isPdf: true }, contentMap: new Map() }
 
     const { metadata, info } = await pdf.getMetadata() ?? {}
     // TODO: for better results, parse `metadata.getRaw()`
@@ -144,6 +145,17 @@ export const makePDF = async file => {
     book.toc = outline?.map(makeTOCItem)
 
     const cache = new Map()
+    const getIndexContent = async index => {
+        const page = await pdf.getPage(index + 1)
+        const textContent = await page.getTextContent({
+            includeMarkedContent: false,
+            disableNormalization: false
+        })
+        const pageText = textContent.items
+            .map(item => item.str)
+            .join(' ');
+        return pageText
+    }
     book.sections = Array.from({ length: pdf.numPages }).map((_, i) => ({
         id: i,
         load: async () => {
@@ -156,17 +168,7 @@ export const makePDF = async file => {
         async getPage() {
             return await pdf.getPage(i + 1)
         },
-        loadText: async () => {
-            const page = await pdf.getPage(i + 1)
-            const textContent = await page.getTextContent({
-                includeMarkedContent: false,
-                disableNormalization: false
-            })
-            const pageText = textContent.items
-                .map(item => item.str)
-                .join(' ');
-            return pageText
-        },
+        loadText: async () => getIndexContent(i),
         size: 1000,
     }))
     book.isExternal = uri => /^\w+:/i.test(uri)
@@ -194,8 +196,9 @@ export const makePDF = async file => {
     book.getTOCFragment = doc => doc.documentElement
     book.getCover = async () => renderPage(await pdf.getPage(1), true)
     book.destroy = () => pdf.destroy()
-    const getContentMap = async () => {
-        const tocs = flatten(book.toc).filter(item => !item.subitems)
+    const getIndexList = async () => {
+        const tocs = flatten(book.toc)
+        console.log('tocs', tocs)
         const indexList = await Promise.all(tocs.map(async item => ({
             ...item,
             index: await book.getHrefIndex(item.href),
@@ -203,15 +206,25 @@ export const makePDF = async file => {
         })))
         return indexList
     }
-    book.getContentMap = getContentMap(book.toc)
+    book.getIndexList = getIndexList(book.toc)
+    book.getTocContent = async toc => {
+        if (!toc) return ''
+        const { start, end, path } = toc
+        if (book.contentMap.has(path)) return book.contentMap.get(path)
+        const content = await Promise.all(Array.from({ length: end - start }).map(async (_, i) => getIndexContent(start)))
+        book.contentMap.set(path, content.join(' '))
+        return content.join(' ')
+    }
     book.getTocIndex = async index => {
-        return book.getContentMap.then(indexList => {
+        return book.getIndexList.then(indexList => {
             for (let i = 0; i < indexList.length; i++) {
                 const start = indexList[i]?.index ?? 0
                 const end = indexList[i + 1]?.index ?? 0
                 if (index >= start && index < end) {
+                    const path = `page:${start}-${end}`
                     return {
                         ...indexList[i],
+                        path,
                         start,
                         end
                     }
