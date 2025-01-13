@@ -246,13 +246,27 @@ ${pageText}
     book.getCover = async () => renderPage(await pdf.getPage(1), true)
     book.destroy = () => pdf.destroy()
     const getIndexList = async () => {
-        const tocs = flatten(book.toc).filter(item => item.level === 2 || (item.level === 1 && !item.subitems?.length))
-        console.log('tocs', tocs)
-        const indexList = await Promise.all(tocs.map(async item => ({
-            ...item,
-            index: await book.getHrefIndex(item.href),
-            url: JSON.parse(item.href)
-        })))
+        debugger
+        if (book.toc && book.toc.length > 1) {
+            const tocs = flatten(book.toc).filter(item => item.level === 2 || (item.level === 1 && !item.subitems?.length))
+            console.log('tocs', tocs)
+            const indexList = await Promise.all(tocs.map(async item => ({
+                ...item,
+                index: await book.getHrefIndex(item.href),
+                url: JSON.parse(item.href)
+            })))
+            return indexList
+        }
+        // 没有toc，则返回每10页一节
+        const indexList = []
+        for (let i = 0; i < pdf.numPages; i += 10) {
+            indexList.push({
+                index: i,
+                url: `page:${i}-${i + 10}`,
+                level: 2,
+            })
+        }
+        console.log('indexList', indexList)
         return indexList
     }
     book.getIndexList = getIndexList(book.toc)
