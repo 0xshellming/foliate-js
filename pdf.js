@@ -3,11 +3,11 @@ const pdfjsPath = path => new URL(`vendor/pdfjs/${path}`, import.meta.url).toStr
 import './vendor/pdfjs/pdf.mjs'
 const pdfjsLib = globalThis.pdfjsLib
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsPath('pdf.worker.mjs')
-const flatten = items => items
+
+const flatten = (items, level = 0) => items
     .map(item => item.subitems?.length
-        ? item.subitems.flat()
-        : null)
-    .filter(Boolean)
+        ? [{ ...item, level }, flatten(item.subitems, level + 1)].flat()
+        : { ...item, level })
     .flat()
 
 const fetchText = async url => await (await fetch(url)).text()
@@ -148,13 +148,62 @@ export const makePDF = async file => {
     const getIndexContent = async index => {
         const page = await pdf.getPage(index + 1)
         const textContent = await page.getTextContent({
-            includeMarkedContent: false,
-            disableNormalization: false
+            includeMarkedContent: true,
+            disableNormalization: true
         })
-        const pageText = textContent.items
-            .map(item => item.str)
-            .join(' ');
-        return pageText
+
+        // Filter valid items and group by vertical position
+        const validItems = textContent.items.filter(item =>
+            item.str &&
+            Array.isArray(item.transform) &&
+            item.transform.length >= 6
+        )
+
+        if (validItems.length === 0) {
+            return `
+----- page:${index} start -----
+[No readable text content found on this page]
+----- page:${index} end -----
+\n`
+        }
+
+        // Group items by vertical position to maintain reading order
+        const lines = []
+        let currentY
+        let currentLine = []
+
+        validItems.forEach(item => {
+            const y = item.transform[5] // vertical position
+            if (currentY === undefined || Math.abs(currentY - y) > 5) {
+                if (currentLine.length > 0) {
+                    lines.push(currentLine)
+                }
+                currentLine = [item]
+                currentY = y
+            } else {
+                currentLine.push(item)
+            }
+        })
+        if (currentLine.length > 0) {
+            lines.push(currentLine)
+        }
+
+        // Sort lines from top to bottom and combine items in each line
+        const pageText = lines
+            .sort((a, b) => b[0].transform[5] - a[0].transform[5]) // Sort by Y position
+            .map(line =>
+                line
+                    .sort((a, b) => a.transform[4] - b.transform[4]) // Sort by X position within line
+                    .map(item => item.str)
+                    .join(' ')
+            )
+            .join('\n')
+
+        return `
+----- page:${index} start -----
+${pageText}
+----- page:${index} end -----
+\n`
     }
     book.sections = Array.from({ length: pdf.numPages }).map((_, i) => ({
         id: i,
@@ -197,7 +246,7 @@ export const makePDF = async file => {
     book.getCover = async () => renderPage(await pdf.getPage(1), true)
     book.destroy = () => pdf.destroy()
     const getIndexList = async () => {
-        const tocs = flatten(book.toc)
+        const tocs = flatten(book.toc).filter(item => item.level === 2 || (item.level === 1 && !item.subitems?.length))
         console.log('tocs', tocs)
         const indexList = await Promise.all(tocs.map(async item => ({
             ...item,
@@ -211,9 +260,13 @@ export const makePDF = async file => {
         if (!toc) return ''
         const { start, end, path } = toc
         if (book.contentMap.has(path)) return book.contentMap.get(path)
-        const content = await Promise.all(Array.from({ length: end - start }).map(async (_, i) => getIndexContent(start)))
-        book.contentMap.set(path, content.join(' '))
-        return content.join(' ')
+        let content = ''
+        for (let i = start; i < end; i++) {
+            const pageContent = await getIndexContent(i)
+            content += pageContent
+        }
+        book.contentMap.set(path, content)
+        return content
     }
     book.getTocIndex = async index => {
         return book.getIndexList.then(indexList => {
