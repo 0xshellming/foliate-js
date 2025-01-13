@@ -233,5 +233,5 @@ const url = params.get('url')
 if (url) open(url).catch(e => console.error(e))
 
 const id = params.get('id')
-if (id) open(`https://3min.top/file/book/${id}`).catch(e => console.error(e))
+if (id) open(`/file/book/${id}`).catch(e => console.error(e))
 else dropTarget.style.visibility = 'visible'
