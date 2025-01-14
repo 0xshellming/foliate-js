@@ -18,7 +18,7 @@ const textLayerBuilderCSS = await fetchText(pdfjsPath('text_layer_builder.css'))
 // https://github.com/mozilla/pdf.js/blob/642b9a5ae67ef642b9a8808fd9efd447e8c350e2/web/annotation_layer_builder.css
 const annotationLayerBuilderCSS = await fetchText(pdfjsPath('annotation_layer_builder.css'))
 
-const render = async (page, doc, zoom) => {
+const render = async (page, doc, zoom, pdfDoc) => {
     const scale = zoom * devicePixelRatio
     doc.documentElement.style.transform = `scale(${1 / devicePixelRatio})`
     doc.documentElement.style.transformOrigin = 'top left'
@@ -71,9 +71,18 @@ const render = async (page, doc, zoom) => {
             addLinkAttributes: (link, url) => link.href = url,
         },
     })
+
+    // Send page change event
+    window.parent.postMessage({
+        type: 'reader:page-changed',
+        data: {
+            currentPage: page.pageNumber,
+            totalPages: pdfDoc.numPages
+        }
+    }, '*')
 }
 
-const renderPage = async (page, getImageBlob) => {
+const renderPage = async (page, getImageBlob, pdfDoc) => {
     const viewport = page.getViewport({ scale: 1 })
     if (getImageBlob) {
         const canvas = document.createElement('canvas')
@@ -100,7 +109,7 @@ const renderPage = async (page, getImageBlob) => {
         <div class="textLayer"></div>
         <div class="annotationLayer"></div>
     `], { type: 'text/html' }))
-    const onZoom = ({ doc, scale }) => render(page, doc, scale)
+    const onZoom = ({ doc, scale }) => render(page, doc, scale, pdfDoc)
     return { src, onZoom }
 }
 
@@ -123,6 +132,12 @@ export const makePDF = async file => {
         standardFontDataUrl: pdfjsPath('standard_fonts/'),
         isEvalSupported: false,
     }).promise
+
+    // Send loaded event
+    window.parent.postMessage({
+        type: 'reader:loaded',
+        data: {}
+    }, '*')
 
     const book = { rendition: { layout: 'pre-paginated', pdf, isPdf: true }, contentMap: new Map() }
 
@@ -210,7 +225,7 @@ ${pageText}
         load: async () => {
             const cached = cache.get(i)
             if (cached) return cached
-            const url = await renderPage(await pdf.getPage(i + 1))
+            const url = await renderPage(await pdf.getPage(i + 1), false, pdf)
             cache.set(i, url)
             return url
         },
@@ -255,7 +270,7 @@ ${pageText}
         }
     }
     book.getTOCFragment = doc => doc.documentElement
-    book.getCover = async () => renderPage(await pdf.getPage(1), true)
+    book.getCover = async () => renderPage(await pdf.getPage(1), true, pdf)
     book.destroy = () => pdf.destroy()
     const getIndexList = async () => {
         if (book.toc && book.toc.length > 1) {

@@ -182,9 +182,9 @@ class Reader {
         }
     }
     #handleKeydown(event) {
-        const k = event.key
-        if (k === 'ArrowLeft' || k === 'h') this.view.goLeft()
-        else if (k === 'ArrowRight' || k === 'l') this.view.goRight()
+        // const k = event.key
+        // if (k === 'ArrowLeft' || k === 'h') this.view.goLeft()
+        // else if (k === 'ArrowRight' || k === 'l') this.view.goRight()
     }
     #onLoad({ detail: { doc } }) {
         doc.addEventListener('keydown', this.#handleKeydown.bind(this))
@@ -237,11 +237,11 @@ if (id) open(`/file/book/${id}`).catch(e => console.error(e))
 else dropTarget.style.visibility = 'visible'
 
 window.addEventListener('message', e => {
-    if (e.data.type === 'next-page') {
-        globalThis.reader.view.goRight()
-    } else if (e.data.type === 'prev-page') {
-        globalThis.reader.view.goLeft()
+    if (e.data.type === 'reader:next-page') {
+        globalThis.reader.goRight()
+    } else if (e.data.type === 'reader:prev-page') {
+        globalThis.reader.goLeft()
     } else if (e.data.type === 'go-to-page') {
-        globalThis.reader.view.goTo(e.data.page)
+        globalThis.reader.goTo(e.data.page)
     }
 })
