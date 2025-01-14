@@ -161,65 +161,70 @@ export const makePDF = async file => {
 
     const cache = new Map()
     const getIndexContent = async index => {
-        const page = await pdf.getPage(index + 1)
-        const textContent = await page.getTextContent({
-            includeMarkedContent: true,
-            disableNormalization: true
-        })
+        try {
+            const page = await pdf.getPage(index + 1)
+            const textContent = await page.getTextContent({
+                includeMarkedContent: true,
+                disableNormalization: true
+            })
 
-        // Filter valid items and group by vertical position
-        const validItems = textContent.items.filter(item =>
-            item.str &&
-            Array.isArray(item.transform) &&
-            item.transform.length >= 6
-        )
-
-        if (validItems.length === 0) {
-            return `
------ page:${index} start -----
-[No readable text content found on this page]
------ page:${index} end -----
-\n`
-        }
-
-        // Group items by vertical position to maintain reading order
-        const lines = []
-        let currentY
-        let currentLine = []
-
-        validItems.forEach(item => {
-            const y = item.transform[5] // vertical position
-            if (currentY === undefined || Math.abs(currentY - y) > 5) {
-                if (currentLine.length > 0) {
-                    lines.push(currentLine)
-                }
-                currentLine = [item]
-                currentY = y
-            } else {
-                currentLine.push(item)
-            }
-        })
-        if (currentLine.length > 0) {
-            lines.push(currentLine)
-        }
-
-        // Sort lines from top to bottom and combine items in each line
-        const pageText = lines
-            .sort((a, b) => b[0].transform[5] - a[0].transform[5]) // Sort by Y position
-            .map(line =>
-                line
-                    .sort((a, b) => a.transform[4] - b.transform[4]) // Sort by X position within line
-                    .map(item => item.str)
-                    .join(' ')
+            // Filter valid items and group by vertical position
+            const validItems = textContent.items.filter(item =>
+                item.str &&
+                Array.isArray(item.transform) &&
+                item.transform.length >= 6
             )
-            .join('\n')
 
-        return `
------ page:${index} start -----
-${pageText}
------ page:${index} end -----
-\n`
+            if (validItems.length === 0) {
+                return `
+                ----- page:${index} start -----
+                [No readable text content found on this page]
+                ----- page:${index} end -----
+                \n`
+            }
+
+            // Group items by vertical position to maintain reading order
+            const lines = []
+            let currentY
+            let currentLine = []
+
+            validItems.forEach(item => {
+                const y = item.transform[5] // vertical position
+                if (currentY === undefined || Math.abs(currentY - y) > 5) {
+                    if (currentLine.length > 0) {
+                        lines.push(currentLine)
+                    }
+                    currentLine = [item]
+                    currentY = y
+                } else {
+                    currentLine.push(item)
+                }
+            })
+            if (currentLine.length > 0) {
+                lines.push(currentLine)
+            }
+
+            // Sort lines from top to bottom and combine items in each line
+            const pageText = lines
+                .sort((a, b) => b[0].transform[5] - a[0].transform[5]) // Sort by Y position
+                .map(line =>
+                    line
+                        .sort((a, b) => a.transform[4] - b.transform[4]) // Sort by X position within line
+                        .map(item => item.str)
+                        .join(' ')
+                )
+                .join('\n')
+
+            return `
+                ----- page:${index} start -----
+                ${pageText}
+                ----- page:${index} end -----
+                \n`
+        } catch (error) {
+            return ''
+        }
     }
+
     book.sections = Array.from({ length: pdf.numPages }).map((_, i) => ({
         id: i,
         load: async () => {
