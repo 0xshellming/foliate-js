@@ -119,15 +119,15 @@ export class FixedLayout extends HTMLElement {
             : this.#zoom === 'fit-width' ? (portrait || this.#center
                 ? width / (target.width ?? blankWidth)
                 : width / ((left.width ?? blankWidth) + (right.width ?? blankWidth)))
-            : (portrait || this.#center
-                ? Math.min(
-                    width / (target.width ?? blankWidth),
-                    height / (target.height ?? blankHeight))
-                : Math.min(
-                    width / ((left.width ?? blankWidth) + (right.width ?? blankWidth)),
-                    height / Math.max(
-                        left.height ?? blankHeight,
-                        right.height ?? blankHeight)))
+                : (portrait || this.#center
+                    ? Math.min(
+                        width / (target.width ?? blankWidth),
+                        height / (target.height ?? blankHeight))
+                    : Math.min(
+                        width / ((left.width ?? blankWidth) + (right.width ?? blankWidth)),
+                        height / Math.max(
+                            left.height ?? blankHeight,
+                            right.height ?? blankHeight)))
 
         const transform = frame => {
             let { element, iframe, width, height, blank, onZoom } = frame
@@ -234,7 +234,7 @@ export class FixedLayout extends HTMLElement {
             else {
                 if (last.center || last.left) newSpread().right = section
                 else if (last.right || !i) last.left = section
-                else last .right = section
+                else last.right = section
             }
             return arr
         }, [{}])
@@ -246,8 +246,10 @@ export class FixedLayout extends HTMLElement {
         return this.book.sections.indexOf(section)
     }
     #reportLocation(reason) {
-        this.dispatchEvent(new CustomEvent('relocate', { detail:
-            { reason, range: null, index: this.index, fraction: 0, size: 1 } }))
+        this.dispatchEvent(new CustomEvent('relocate', {
+            detail:
+                { reason, range: null, index: this.index, fraction: 0, size: 1 }
+        }))
     }
     getSpreadOf(section) {
         const spreads = this.#spreads
@@ -302,6 +304,20 @@ export class FixedLayout extends HTMLElement {
         const s = this.rtl ? this.#goRight() : this.#goLeft()
         if (s) this.#reportLocation('page')
         else return this.goToSpread(this.#index - 1, this.rtl ? 'left' : 'right', 'page')
+    }
+    // 导航到下一章节
+    async nextChapter() {
+        const current = this.#spreads?.[this.#index]?.right?.id || 0
+        return this.book.getNextChapterIndex(current).then(index => {
+            return this.goTo(index)
+        })
+    }
+    // 导航到上一章节
+    async prevChapter() {
+        const current = this.#spreads?.[this.#index]?.left?.id || 0
+        return this.book.getPrevChapterIndex(current).then(index => {
+            return this.goTo(index)
+        })
     }
     getContents() {
         return Array.from(this.#root.querySelectorAll('iframe'), frame => ({

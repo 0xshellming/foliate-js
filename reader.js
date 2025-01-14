@@ -190,7 +190,7 @@ class Reader {
         doc.addEventListener('keydown', this.#handleKeydown.bind(this))
     }
     #onRelocate({ detail }) {
-        const { fraction, location, tocItem, pageItem, nextTocItem } = detail
+        const { fraction, location, tocItem, pageItem } = detail
         const percent = percentFormat.format(fraction)
         const loc = pageItem
             ? `Page ${pageItem.label}`
@@ -241,6 +241,10 @@ window.addEventListener('message', e => {
         globalThis.reader.goRight()
     } else if (e.data.type === 'reader:prev-page') {
         globalThis.reader.goLeft()
+    } else if (e.data.type === 'reader:next-chapter') {
+        globalThis.reader.nextChapter()
+    } else if (e.data.type === 'reader:prev-chapter') {
+        globalThis.reader.prevChapter()
     } else if (e.data.type === 'go-to-page') {
         globalThis.reader.goTo(e.data.page)
     }

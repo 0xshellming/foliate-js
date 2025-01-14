@@ -286,9 +286,10 @@ ${pageText}
         // 没有toc，则返回每10页一节
         const indexList = []
         for (let i = 0; i < pdf.numPages; i += 10) {
+            const start = i + 10
             indexList.push({
-                index: i,
-                url: `page:${i}-${i + 10}`,
+                index: start,
+                url: `page:${start}`,
                 level: 2,
             })
         }
@@ -313,6 +314,9 @@ ${pageText}
             for (let i = 0; i < indexList.length; i++) {
                 const start = indexList[i]?.index ?? 0
                 const end = indexList[i + 1]?.index ?? 0
+                if (index < start) {
+                    return { start: 0, end: Math.max(start - 1, 0) }
+                }
                 if (index >= start && index < end) {
                     const path = `page:${start}-${end}`
                     return {
@@ -321,6 +325,35 @@ ${pageText}
                         start,
                         end
                     }
+                }
+            }
+        })
+    }
+    book.getNextChapterIndex = async (index) => {
+        return book.getIndexList.then(indexList => {
+            for (let i = 0; i < indexList.length; i++) {
+                const current = indexList[i]
+                const next = indexList[i + 1]
+                const start = current?.index ?? 0
+                const end = next?.index ?? 0
+                if (i === 0 && index < start) {
+                    return { index: start }
+                }
+                if (index >= start && index < end) {
+                    return { index: end }
+                }
+            }
+        })
+    }
+    book.getPrevChapterIndex = async (index) => {
+        return book.getIndexList.then(indexList => {
+            for (let i = 0; i < indexList.length; i++) {
+                const prev = indexList[i - 1]
+                const current = indexList[i]
+                const start = prev?.index ?? 0
+                const end = current?.index ?? 0
+                if (index > start && index <= end) {
+                    return { index: start }
                 }
             }
         })

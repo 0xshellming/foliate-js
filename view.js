@@ -636,6 +636,16 @@ export class View extends HTMLElement {
         return this.book.dir === 'rtl' ? this.prev() : this.next()
     }
 
+    // 导航到下一章节
+    nextChapter() {
+        return this.renderer.nextChapter()
+    }
+
+    // 导航到上一章节
+    prevChapter() {
+        return this.renderer.prevChapter()
+    }
+
     // 在章节内搜索的生成器函数
     async * #searchSection(matcher, query, index) {
         const doc = await this.book.sections[index].createDocument()
