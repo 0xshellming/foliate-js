@@ -315,7 +315,8 @@ ${pageText}
                 const start = indexList[i]?.index ?? 0
                 const end = indexList[i + 1]?.index ?? 0
                 if (index < start) {
-                    return { start: 0, end: Math.max(start - 1, 0) }
+                    const ret = { start: 0, end: Math.max(start - 1, 0) }
+                    return { ...ret, path: `page:0-${ret.end}` }
                 }
                 if (index >= start && index < end) {
                     const path = `page:${start}-${end}`
