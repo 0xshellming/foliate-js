@@ -222,31 +222,42 @@ ${pageText}
     }))
     book.isExternal = uri => /^\w+:/i.test(uri)
     book.resolveHref = async href => {
-        const parsed = JSON.parse(href)
-        const dest = typeof parsed === 'string'
-            ? await pdf.getDestination(parsed) : parsed
-        const index = await pdf.getPageIndex(dest[0])
-        return { index }
+        try {
+            const parsed = JSON.parse(href)
+            const dest = typeof parsed === 'string'
+                ? await pdf.getDestination(parsed) : parsed
+            const index = await pdf.getPageIndex(dest[0])
+            return { index }
+        } catch (error) {
+            console.error('resolveHref error', error)
+        }
     }
     book.splitTOCHref = async href => {
-        const parsed = JSON.parse(href)
-        const dest = typeof parsed === 'string'
-            ? await pdf.getDestination(parsed) : parsed
-        const index = await pdf.getPageIndex(dest[0])
-        return [index, null]
+        try {
+            const parsed = JSON.parse(href)
+            const dest = typeof parsed === 'string'
+                ? await pdf.getDestination(parsed) : parsed
+            const index = await pdf.getPageIndex(dest[0])
+            return [index, null]
+        } catch (error) {
+            console.error('splitTOCHref error', error)
+        }
     }
     book.getHrefIndex = async href => {
-        const parsed = JSON.parse(href)
-        const dest = typeof parsed === 'string'
-            ? await pdf.getDestination(parsed) : parsed
-        const index = await pdf.getPageIndex(dest[0])
-        return index
+        try {
+            const parsed = JSON.parse(href)
+            const dest = typeof parsed === 'string'
+                ? await pdf.getDestination(parsed) : parsed
+            const index = await pdf.getPageIndex(dest[0])
+            return index
+        } catch (error) {
+            console.error('getHrefIndex error', error)
+        }
     }
     book.getTOCFragment = doc => doc.documentElement
     book.getCover = async () => renderPage(await pdf.getPage(1), true)
     book.destroy = () => pdf.destroy()
     const getIndexList = async () => {
-        debugger
         if (book.toc && book.toc.length > 1) {
             const tocs = flatten(book.toc).filter(item => item.level === 2 || (item.level === 1 && !item.subitems?.length))
             console.log('tocs', tocs)

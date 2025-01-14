@@ -386,7 +386,7 @@ export class View extends HTMLElement {
                     ...detail,
                     timestamp: Date.now()
                 }
-            }, '*');
+            }, '*')
         }
         return this.dispatchEvent(new CustomEvent(name, { detail, cancelable }))
     }
