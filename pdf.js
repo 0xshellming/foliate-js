@@ -115,8 +115,8 @@ const renderPage = async (page, getImageBlob, pdfDoc) => {
 
 const makeTOCItem = item => ({
     label: item.title,
-    href: JSON.stringify(item.dest),
-    subitems: item.items.length ? item.items.map(makeTOCItem) : null,
+    href: item.dest ? JSON.stringify(item.dest) : null,
+    subitems: item.items.length ? item.items.filter(e => e && e.dest).map(makeTOCItem) : null,
 })
 
 export const makePDF = async file => {
@@ -157,7 +157,7 @@ export const makePDF = async file => {
     }
 
     const outline = await pdf.getOutline()
-    book.toc = outline?.map(makeTOCItem)
+    book.toc = outline?.filter(e => e && e.dest)?.map(makeTOCItem)
 
     const cache = new Map()
     const getIndexContent = async index => {
