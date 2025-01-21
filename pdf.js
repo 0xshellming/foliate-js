@@ -279,14 +279,18 @@ export const makePDF = async file => {
     book.destroy = () => pdf.destroy()
     const getIndexList = async () => {
         if (book.toc && book.toc.length > 1) {
-            const tocs = flatten(book.toc).filter(item => item.level === 2 || (item.level === 1 && !item.subitems?.length))
-            console.log('tocs', tocs)
-            const indexList = await Promise.all(tocs.map(async item => ({
-                ...item,
-                index: await book.getHrefIndex(item.href),
-                url: JSON.parse(item.href)
-            })))
-            return indexList
+            const flattenToc = flatten(book.toc) || []
+            if (Array.isArray(flattenToc) && flattenToc.some(e => e.level === 1 || e.level === 2)) {
+                const tocs = flattenToc.filter(item => item.level === 2 || (item.level === 1 && !item.subitems?.length))
+                const indexList = await Promise.all(tocs.map(async item => ({
+                    ...item,
+                    index: await book.getHrefIndex(item.href),
+                    url: JSON.parse(item.href)
+                })))
+                return indexList
+            } else {
+                return flattenToc
+            }
         }
         // 没有toc，则返回每10页一节
         const indexList = []
