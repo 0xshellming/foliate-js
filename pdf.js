@@ -289,7 +289,12 @@ export const makePDF = async file => {
                 })))
                 return indexList
             } else {
-                return flattenToc
+                const indexList = await Promise.all(flattenToc.map(async item => ({
+                    ...item,
+                    index: await book.getHrefIndex(item.href),
+                    url: JSON.parse(item.href)
+                })))
+                return indexList
             }
         }
         // 没有toc，则返回每10页一节
