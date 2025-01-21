@@ -280,13 +280,15 @@ export const makePDF = async file => {
     const getIndexList = async () => {
         if (book.toc && book.toc.length > 1) {
             const flattenToc = flatten(book.toc) || []
+            // console.log('flattenToc', flattenToc)
             if (Array.isArray(flattenToc) && flattenToc.some(e => e.level === 1 || e.level === 2)) {
-                const tocs = flattenToc.filter(item => item.level === 2 || (item.level === 1 && !item.subitems?.length))
+                const tocs = flattenToc.filter(item => item.level === 2 || (item.level <= 1 && !item.subitems?.length))
                 const indexList = await Promise.all(tocs.map(async item => ({
                     ...item,
                     index: await book.getHrefIndex(item.href),
                     url: JSON.parse(item.href)
                 })))
+                // console.log('indexList', indexList)
                 return indexList
             } else {
                 const indexList = await Promise.all(flattenToc.map(async item => ({
@@ -294,6 +296,7 @@ export const makePDF = async file => {
                     index: await book.getHrefIndex(item.href),
                     url: JSON.parse(item.href)
                 })))
+                // console.log('indexList', indexList)
                 return indexList
             }
         }

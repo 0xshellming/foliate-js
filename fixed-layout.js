@@ -309,14 +309,14 @@ export class FixedLayout extends HTMLElement {
     async nextChapter() {
         const current = this.#spreads?.[this.#index]?.right?.id || 0
         return this.book.getNextChapterIndex(current).then(index => {
-            return this.goTo(index)
+            return this.goTo(index || { index: this.book.sections.length - 1 })
         })
     }
     // 导航到上一章节
     async prevChapter() {
         const current = this.#spreads?.[this.#index]?.left?.id || 0
         return this.book.getPrevChapterIndex(current).then(index => {
-            return this.goTo(index)
+            return this.goTo(index || { index: 0 })
         })
     }
     getContents() {
