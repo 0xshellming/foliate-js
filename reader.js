@@ -74,11 +74,13 @@ class Reader {
     closeSideBar() {
         $('#dimming-overlay').classList.remove('show')
         $('#side-bar').classList.remove('show')
+        window.parent.postMessage({ type: 'reader:sidebar-closed' }, '*')
     }
     constructor() {
         $('#side-bar-button').addEventListener('click', () => {
             $('#dimming-overlay').classList.add('show')
             $('#side-bar').classList.add('show')
+            window.parent.postMessage({ type: 'reader:sidebar-opened' }, '*')
         })
         $('#dimming-overlay').addEventListener('click', () => this.closeSideBar())
 
