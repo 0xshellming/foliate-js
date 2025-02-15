@@ -212,6 +212,25 @@ const open = async file => {
     await reader.open(file)
 }
 
+// Add function to read from IndexedDB
+const readFromIndexedDB = async (id) => {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('BooksDatabase', 1)
+
+        request.onerror = () => reject(request.error)
+
+        request.onsuccess = (event) => {
+            const db = event.target.result
+            const transaction = db.transaction(['book_file'], 'readonly')
+            const store = transaction.objectStore('book_file')
+            const getRequest = store.get(`book/${id}`)
+
+            getRequest.onsuccess = () => resolve(getRequest.result)
+            getRequest.onerror = () => reject(getRequest.error)
+        }
+    })
+}
+
 const dragOverHandler = e => e.preventDefault()
 const dropHandler = e => {
     e.preventDefault()
@@ -235,8 +254,25 @@ const url = params.get('url')
 if (url) open(url).catch(e => console.error(e))
 
 const id = params.get('id')
-if (id) open(`/file/book/${id}`).catch(e => console.error(e))
-else dropTarget.style.visibility = 'visible'
+if (id) {
+    try {
+        // Try to read from IndexedDB first
+        const bookData = await readFromIndexedDB(id)
+        console.log('Book data found in IndexedDB:', bookData)
+        if (bookData) {
+            open(bookData).catch(e => console.error(e))
+        } else {
+            // If not found in IndexedDB, fetch from server
+            open(`/file/book/${id}`).catch(e => console.error(e))
+        }
+    } catch (error) {
+        console.error('Error reading from IndexedDB:', error)
+        // Fallback to server fetch if IndexedDB fails
+        open(`/file/book/${id}`).catch(e => console.error(e))
+    }
+} else {
+    dropTarget.style.visibility = 'visible'
+}
 
 window.addEventListener('message', e => {
     if (e.data.type === 'reader:next-page') {
