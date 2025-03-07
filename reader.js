@@ -283,7 +283,7 @@ window.addEventListener('message', e => {
         globalThis.reader.nextChapter()
     } else if (e.data.type === 'reader:prev-chapter') {
         globalThis.reader.prevChapter()
-    } else if (e.data.type === 'go-to-page') {
-        globalThis.reader.goTo(e.data.page)
+    } else if (e.data.type === 'reader:go-to-page') {
+        globalThis.reader.goTo(e.data.data.page)
     }
 })
